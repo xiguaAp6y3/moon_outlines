@@ -17,6 +17,7 @@ priv enum Tok {
   RBracketT
   SemiT
   NewlineT
+  ClassPatTok(String)
   EofT
 } derive(Eq)
 
@@ -55,6 +56,36 @@ fn lex(src : String) -> Result[Array[(Tok, Int)], String] {
       while i < n && units[i].to_int() != 10 {
         i = i + 1
       }
+      continue
+    }
+    if c == 47 {
+      // /class/ 字符类：扫到未转义的 '/'，内容原样保留给 parse_class_body
+      let start = i
+      i = i + 1
+      let sb = StringBuilder()
+      let mut closed = false
+      while i < n {
+        let u = units[i].to_int()
+        if u == 92 && i + 1 < n {
+          sb.write_char((92).unsafe_to_char())
+          sb.write_char(units[i + 1].to_int().unsafe_to_char())
+          i = i + 2
+          continue
+        }
+        if u == 47 {
+          closed = true
+          i = i + 1
+          break
+        }
+        sb.write_char(u.unsafe_to_char())
+        i = i + 1
+      }
+      if !closed {
+        return Err(
+          "unterminated character class at position " + start.to_string(),
+        )
+      }
+      out.push((ClassPatTok(sb.to_string()), start))
       continue
     }
     if c == 34 || c == 39 {

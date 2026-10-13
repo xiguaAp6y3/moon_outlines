@@ -54,6 +54,7 @@ fn atom_str(e : Expr) -> String {
   match e {
     Terminal(s) => quote_terminal(s)
     Nonterminal(n) => n
+    Chars(ranges, neg) => render_class(ranges, neg)
     Sequence(items) => "(" + join_map(items, " ", op_str) + ")"
     Alternation(items) => "(" + join_map(items, " | ", op_str) + ")"
     Repetition(inner) => "(" + op_str(inner) + ")*"
@@ -99,4 +100,62 @@ fn join_map(items : Array[Expr], sep : String, f : (Expr) -> String) -> String {
     sb.write_string(f(items[i]))
   }
   sb.to_string()
+}
+
+///|
+/// 字符类原子的规范化渲染：/…/，成员转义，区间 lo-hi
+// 类成员转义的两字符字面量（用常量规避 MoonBit 字符串转义歧义）
+const BS_SLASH : String = "\\/"
+
+///|
+const BS_N : String = "\\n"
+
+///|
+const BS_T : String = "\\t"
+
+///|
+const BS_R : String = "\\r"
+
+///|
+const BS_MINUS : String = "\\-"
+
+///|
+fn render_class(ranges : Array[(Int, Int)], negated : Bool) -> String {
+  let sb = StringBuilder()
+  sb.write_char('/')
+  if negated {
+    sb.write_char('^')
+  }
+  for i = 0; i < ranges.length(); i = i + 1 {
+    let (lo, hi) = ranges[i]
+    class_emit(sb, lo)
+    if hi != lo {
+      sb.write_char('-')
+      class_emit(sb, hi)
+    }
+  }
+  sb.write_char('/')
+  sb.to_string()
+}
+
+///|
+/// 类成员转义输出
+fn class_emit(sb : StringBuilder, code : Int) -> Unit {
+  if code == 92 {
+    sb.write_string("\\\\")
+  } else if code == 47 {
+    sb.write_string(BS_SLASH)
+  } else if code == 34 {
+    sb.write_string("\\\"")
+  } else if code == 10 {
+    sb.write_string(BS_N)
+  } else if code == 9 {
+    sb.write_string(BS_T)
+  } else if code == 13 {
+    sb.write_string(BS_R)
+  } else if code == 45 {
+    sb.write_string(BS_MINUS)
+  } else {
+    sb.write_char(code.unsafe_to_char())
+  }
 }

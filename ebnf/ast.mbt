@@ -28,6 +28,8 @@ pub struct Rule {
 pub enum Expr {
   /// 字面终结符，如 "\"" 或 "true"
   Terminal(String)
+  /// 字符类原子：匹配单个码元（EBNF 中以 /class/ 书写）
+  Chars(Array[(Int, Int)], Bool)
   /// 非终结符引用，按名字解析到 Grammar.rules
   Nonterminal(String)
   /// 序列：依次匹配

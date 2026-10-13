@@ -8,6 +8,7 @@
 ///   sequence     := item*                     —— 项并置构成序列
 ///   item         := atom ('*' | '+' | '?')*
 ///   atom         := STRING | NAME | '(' alternatives ')' | '[' alternatives ']'
+///                 | '/class-body/'   —— 字符类原子，匹配单个码元
 ///
 /// 约定：第一条规则是入口规则（Grammar.start）。
 priv struct Parser {
@@ -223,6 +224,16 @@ fn Parser::atom(self : Parser) -> Expr? {
     StrTok(s) => {
       self.pos = self.pos + 1
       Some(Terminal(s))
+    }
+    ClassPatTok(body) => {
+      self.pos = self.pos + 1
+      match parse_class_body(body) {
+        Err(m) => {
+          self.fail(m)
+          None
+        }
+        Ok((ranges, neg)) => Some(Chars(ranges, neg))
+      }
     }
     NameTok(n) => {
       self.pos = self.pos + 1

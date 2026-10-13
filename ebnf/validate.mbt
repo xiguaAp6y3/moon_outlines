@@ -28,6 +28,7 @@ pub fn validate(rules : Array[Rule]) -> Result[Unit, String] {
 fn check_expr(e : Expr, defined : Array[String]) -> Result[Unit, String] {
   match e {
     Terminal(_) => Ok(())
+    Chars(_, _) => Ok(())
     Nonterminal(n) =>
       if contains_str(defined, n) {
         Ok(())
