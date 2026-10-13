@@ -1,5 +1,6 @@
 import {
   "xiguaAp6y3/moon_outlines/regex" @re,
+  "xiguaAp6y3/moon_outlines/ebnf" @eb,
 }
 
 pkgtype(kind: "executable")
