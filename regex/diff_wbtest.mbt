@@ -1,6 +1,7 @@
 // 白盒随机差分测试：包内可直接构造 Regex AST。
 // 随机生成 AST -> 渲染回模式串 -> 编译 NFA / DFA / 最小化 DFA，三方一致性对照。
 // 这是 ROADMAP M2 的验收项：随机差分不少于 1000 个对照用例。
+
 ///|
 fn ok(pattern : String) -> Machine {
   match compile(pattern) {
