@@ -79,3 +79,52 @@ test "epsilon language minimizes to a single accepting state" {
   inspect(min.accepts("a"), content="false")
   inspect(min.state_count() == 1, content="true")
 }
+
+///|
+fn contains_str(arr : Array[String], s : String) -> Bool {
+  for i = 0; i < arr.length(); i = i + 1 {
+    if arr[i] == s {
+      return true
+    }
+  }
+  false
+}
+
+///|
+test "enumerate exact strings for literal patterns" {
+  let min = dfa_of("(ab|ba)").minimize()
+  let got = min.strings_up_to(4, 2, 100)
+  // 单字符区间下枚举应完备：恰好 ab、ba
+  inspect(
+    got.length() == 2 && contains_str(got, "ab") && contains_str(got, "ba"),
+    content="true",
+  )
+  // 且每条都被原机器接受
+  let m = ok("(ab|ba)")
+  for i = 0; i < got.length(); i = i + 1 {
+    if !m.accepts(got[i]) {
+      abort("enumerated invalid string")
+    }
+  }
+}
+
+///|
+test "enumerate all strings over small alphabet up to length 3" {
+  let min = dfa_of("(a|b)*").minimize()
+  let got = min.strings_up_to(3, 2, 100)
+  // 1 + 2 + 4 + 8 = 15 条
+  inspect(got.length(), content="15")
+}
+
+///|
+test "enumerated samples from wide classes are all accepted" {
+  let min = dfa_of("\\d{2}-\\d").minimize()
+  let got = min.strings_up_to(8, 2, 16)
+  inspect(got.length() > 0, content="true")
+  let m = ok("\\d{2}-\\d")
+  for i = 0; i < got.length(); i = i + 1 {
+    if !m.accepts(got[i]) {
+      abort("enumerated invalid string")
+    }
+  }
+}
