@@ -4,13 +4,13 @@
 // To add a dependency, run this command in your terminal:
 //   moon add moonbitlang/x
 
-name = "outlineuser/moon_outlines"
+name = "xiguaAp6y3/moon_outlines"
 
 version = "0.1.0"
 
 readme = "README.md"
 
-repository = ""
+repository = "https://github.com/xiguaAp6y3/moon_outlines"
 
 license = "Apache-2.0"
 
