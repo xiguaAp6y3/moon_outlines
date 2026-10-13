@@ -14,12 +14,35 @@ fn main {
     println("pattern: " + pattern)
     match @re.compile(pattern) {
       Err(msg) => println("  compile error: " + msg)
-      Ok(m) =>
+      Ok(m) => {
+        let dfa = m.to_dfa()
+        let min = dfa.minimize()
+        println(
+          "  states: nfa=" +
+          m.state_count().to_string() +
+          " dfa=" +
+          dfa.state_count().to_string() +
+          " minimized=" +
+          min.state_count().to_string(),
+        )
         for j = 0; j < inputs.length(); j = j + 1 {
           let input = inputs[j]
           let verdict = if m.accepts(input) { "accept" } else { "reject" }
           println("  " + input + " => " + verdict)
         }
+        // 枚举演示：该模式下的合法样例（测试数据生成场景）
+        let samples = min.strings_up_to(6, 2, 5)
+        if samples.length() > 0 {
+          let sb = StringBuilder()
+          for j = 0; j < samples.length(); j = j + 1 {
+            if j > 0 {
+              sb.write_char(' ')
+            }
+            sb.write_string("\"" + samples[j] + "\"")
+          }
+          println("  samples: " + sb.to_string())
+        }
+      }
     }
   }
 }
