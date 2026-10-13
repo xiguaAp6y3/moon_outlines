@@ -154,6 +154,17 @@ fn Nfa::opt_fragment(self : Nfa, frag : (Int, Int)) -> (Int, Int) {
 }
 
 ///|
+/// 集合内是否含接受状态。
+fn Nfa::has_accept(self : Nfa, set : Array[Bool]) -> Bool {
+  for j = 0; j < set.length(); j = j + 1 {
+    if set[j] && self.accept[j] {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// 就地扩展 ε-闭包：membership 为状态隶属向量。
 fn Nfa::close_over_epsilon(self : Nfa, membership : Array[Bool]) -> Unit {
   let stack : Array[Int] = []
