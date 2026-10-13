@@ -4,3 +4,8 @@ target/
 target
 .mooncakes/
 .moonagent/
+.mimosa/
+.idea/
+.vscode/
+*.log
+Thumbs.db
