@@ -50,7 +50,7 @@
 
 ## M5 收尾与发布（10.23-10.24）
 
-- [ ] README 完善、示例、CHANGELOG；mooncakes.io 发布
+- [x] mooncakes.io 发布（v0.1.0，2026-10-13）；README 安装说明更新；CHANGELOG 待补
 - [ ] 申报书定稿（人工撰写，PROPOSAL.md 仅留结构参考）
 - [ ] 提交前自查（osc2026-guide skill：验收模式）
 - 验收：CI 绿 + mooncakes 可安装 + 申报材料齐备

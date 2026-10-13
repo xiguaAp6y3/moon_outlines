@@ -26,8 +26,10 @@ llama.cpp 绑定（`Kaida-Amethyst/llama`）和各类 LLM 客户端，但结构�
 
 ## 使用
 
+已发布到 mooncakes.io：[xiguaAp6y3/moon_outlines](https://mooncakes.io/docs/xiguaAp6y3/moon_outlines)
+
 ```moonbit
-// moon add outlineuser/moon_outlines（发布后）
+// 在你的项目里执行：moon add xiguaAp6y3/moon_outlines
 let machine = @regex.compile("\"(yes|no)\"")
 match machine {
   Ok(m) => {
