@@ -1,0 +1,66 @@
+# moon_outlines 路线图
+
+目标：10 月轮（10.24 截止）交付 M1-M4 核心；季度评选前完成 M5-M6 与生态集成。
+
+约定：每个里程碑合入前必须 `moon check` / `moon test` / `moon fmt --check` 全绿；
+以测试作为主要验收证据；每个里程碑至少 2 个有意义的 commit。
+
+## M0 工程骨架（10.13）✅
+
+- [x] moon new 模板定制：模块名、LICENSE(Apache-2.0)、.gitignore、pre-commit(moon check)
+- [x] CI：三平台 `moon check/test --target all` + `moon fmt --check`
+- [x] README / ROADMAP / PROPOSAL 框架
+- 验收：空仓库到可构建工程；commit ≥ 3
+
+## M1 正则子集 -> NFA -> 全串匹配（10.13-10.15）
+
+- [x] AST 设计（量词解析期脱糖，自动机只处理 5 种基础节点）
+- [x] 递归下降解析器：字面量/`.`/字符类(含取反)/`d D w W s S` 转义/分组/分支/量词
+- [x] Thompson NFA 构造 + ε-闭包模拟匹配（全匹配语义）
+- [x] 黑盒测试：接受/拒绝/错误模式三类用例
+- [ ] 性能基线：简单模式在 1k 长度输入上的匹配耗时记录（不设指标，只记录）
+- 验收：`moon test` ≥ 25 个用例全绿；CLI 可演示
+
+## M2 确定化、枚举与差分测试（10.16-10.18）
+
+- [ ] 子集构造：NFA -> DFA；hopcroft 最小化
+- [ ] NFA/DFA 等价性差分测试（随机正则 + 随机串对照）
+- [ ] 长度受限枚举：从自动机生成所有 ≤N 的合法串（测试数据生成场景）
+- 验收：随机差分 1000 case 通过；枚举与匹配结果一致
+
+## M3 EBNF -> 下推自动机（10.19-10.20）
+
+- [ ] Lark EBNF 子集解析（终结符/非终结符/规则/优先级忽略）
+- [ ] 递归下降 -> 下推自动机（生成语义：按状态给出合法"词组"集合）
+- [ ] JSON 基础文法（RFC 8259 值文法）作为内置文法 + 测试
+- 验收：给定 JSON 文法，任意接受串都能 `moonjson` 解析成功（闭环校验）
+
+## M4 token mask 引擎 + GBNF 导出（10.21-10.23）
+
+- [ ] tokenizer.json 词表加载（对接 howtomakeaname/tokenizers-moonbit 或自实现最小子集）
+- [ ] 自动机状态 × 词表 -> 每步合法 token id 集合（正确性优先，ASCII/BPE 常见路径）
+- [ ] GBNF 文法导出（正则/文法 -> llama.cpp grammar）
+- [ ] 端到端 demo：GBNF + llama.cpp 绑定 + 小模型生成合法 JSON（脚本可复现）
+- 验收：掩码推进与全串匹配一致（性质测试）；demo 脚本入库
+
+## M5 收尾与发布（10.23-10.24）
+
+- [ ] README 完善、示例、CHANGELOG；mooncakes.io 发布
+- [ ] 申报书定稿（人工撰写，PROPOSAL.md 仅留结构参考）
+- [ ] 提交前自查（osc2026-guide skill：验收模式）
+- 验收：CI 绿 + mooncakes 可安装 + 申报材料齐备
+
+## M6 季度评选增强（10.25+，选做）
+
+- [ ] JSON Schema -> 文法降级（类型/enum/范围/pattern 常用关键字）
+- [ ] 与 moonschema 的"生成-校验"闭环测试；性能优化（掩码缓存）
+- [ ] 博客/开发日志
+
+## 风险登记
+
+| 风险 | 缓解 |
+| --- | --- |
+| token 边界/多字节字符掩码错误 | M4 限 ASCII+常见 BPE 路径；性质测试钉死；边界 case 显式列出 |
+| 10 月窗口时间紧 | M1-M4 为安全线；M3/M4 可裁剪范围；M6 留给季度 |
+| 与校验类库的边界被质疑 | README 明确"事前约束 vs 事后校验"互补关系；用 moonschema 做闭环测试 |
+| 上游 API 变动（tokenizer 绑定） | 最小依赖面；必要时自实现词表加载子集 |
