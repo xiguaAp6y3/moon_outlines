@@ -1,0 +1,2 @@
+// regex 包：正则子集解析 + Thompson NFA 构造 + 全串匹配。
+// 依赖：仅 moonbitlang/core（当前为空依赖）。
