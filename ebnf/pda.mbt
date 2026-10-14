@@ -31,10 +31,16 @@ pub struct RepF {
 }
 
 ///|
+pub struct ChoiceF {
+  options : Array[Expr]
+  mut decided : Bool
+}
+
+///|
 pub enum Frame {
   FSeq(SeqF)
   FRep(RepF)
-  FChoice(Array[Expr])
+  FChoice(ChoiceF)
 }
 
 ///|
@@ -296,7 +302,7 @@ fn Pda::walk_next(self : Pda, st : Array[Frame], depth : Int) -> Array[Spec] {
             }
             Alternation(items) => {
               f.idx = f.idx + 1
-              st.push(FChoice(items))
+              st.push(FChoice(ChoiceF::{ options: items, decided: false, }))
               continue
             }
             Repetition(inner) => {
@@ -322,10 +328,15 @@ fn Pda::walk_next(self : Pda, st : Array[Frame], depth : Int) -> Array[Spec] {
             }
           }
         }
-      FChoice(options) => {
+      FChoice(cf) => {
+        // 已提交的分支：选项帧已在上方完成，穿透到后继
+        if cf.decided {
+          let _ = st.pop()
+          continue
+        }
         let specs : Array[Spec] = []
-        for i = 0; i < options.length(); i = i + 1 {
-          match analyze(options[i], self.rules, 0) {
+        for i = 0; i < cf.options.length(); i = i + 1 {
+          match analyze(cf.options[i], self.rules, 0) {
             None => return empty
             Some(a) => append_specs(specs, a.specs)
           }
@@ -333,8 +344,6 @@ fn Pda::walk_next(self : Pda, st : Array[Frame], depth : Int) -> Array[Spec] {
         return specs
       }
       FRep(f) => {
-        // 决策点：副本帧已携带真实 done（迭代完成计数归 settle），
-        // 此处不得递增——首访是"决定是否再迭代"，不是"完成了一次迭代"
         if f.max_times is Some(m) {
           if f.done >= m {
             let _ = st.pop()
@@ -425,7 +434,9 @@ pub fn Pda::feed(self : Pda, s : String) -> Result[Unit, String] {
             }
             Alternation(items) => {
               f.idx = f.idx + 1
-              self.stack.push(FChoice(items))
+              self.stack.push(
+                FChoice(ChoiceF::{ options: items, decided: false, }),
+              )
               continue
             }
             Repetition(inner) => {
@@ -451,16 +462,21 @@ pub fn Pda::feed(self : Pda, s : String) -> Result[Unit, String] {
             }
           }
         }
-      FChoice(options) => {
+      FChoice(cf) => {
+        if cf.decided {
+          // 提交后选项帧在上，settle 会先弹本帧；防御性穿透
+          let _ = self.stack.pop()
+          continue
+        }
         // LL(1) 提交：恰好一个选项的 FIRST 含 s
         let matches : Array[Expr] = []
-        for i = 0; i < options.length(); i = i + 1 {
-          match analyze(options[i], self.rules, 0) {
+        for i = 0; i < cf.options.length(); i = i + 1 {
+          match analyze(cf.options[i], self.rules, 0) {
             None => return self.fail("left recursion in alternation")
             Some(a) =>
               for k = 0; k < a.specs.length(); k = k + 1 {
                 if spec_accepts(a.specs[k], s) {
-                  matches.push(options[i])
+                  matches.push(cf.options[i])
                   break
                 }
               }
@@ -474,6 +490,8 @@ pub fn Pda::feed(self : Pda, s : String) -> Result[Unit, String] {
             "ambiguous grammar: multiple alternatives accept " + s,
           )
         }
+        // 原地标记已提交，压入选定项帧
+        cf.decided = true
         let chosen : Array[Expr] = [matches[0]]
         self.stack.push(FSeq(SeqF::{ items: chosen, idx: 0, }))
         continue
@@ -496,23 +514,20 @@ pub fn Pda::feed(self : Pda, s : String) -> Result[Unit, String] {
           None => false
           Some(a) => a.nul
         }
-        let exit_possible = f.done >= f.min_times || inner_nul
-        // 退出集在副本上计算——迭代时 FRep 必须留在栈下等待子迭代完成
-        let exit_set : Array[Spec] = if exit_possible {
+        let can_exit = f.done >= f.min_times || inner_nul
+        // 退出集 = 去掉本帧后的栈可开始的约束（walk 副本上递归计算）
+        let mut in_exit = false
+        if can_exit {
           let st2 : Array[Frame] = []
           for i = 0; i < self.stack.length() - 1; i = i + 1 {
             st2.push(copy_frame(self.stack[i]))
           }
-          self.walk_next(st2, 0)
-        } else {
-          []
-        }
-        // LL(1) 冲突检测：迭代与退出不可同时接受
-        for k = 0; k < iter_set.length(); k = k + 1 {
-          if spec_in_arr(exit_set, iter_set[k]) {
-            return self.fail(
-              "ambiguous grammar: repetition iteration/exit overlap",
-            )
+          let exit_specs = self.walk_next(st2, 0)
+          for k = 0; k < exit_specs.length(); k = k + 1 {
+            if spec_accepts(exit_specs[k], s) {
+              in_exit = true
+              break
+            }
           }
         }
         let mut in_iter = false
@@ -522,18 +537,16 @@ pub fn Pda::feed(self : Pda, s : String) -> Result[Unit, String] {
             break
           }
         }
+        if in_iter && in_exit {
+          return self.fail(
+            "ambiguous grammar: repetition iteration/exit overlap",
+          )
+        }
         if in_iter {
           // 再入迭代：FRep 保留在栈上，子迭代帧压在其上
           let inner_seq : Array[Expr] = [f.inner]
           self.stack.push(FSeq(SeqF::{ items: inner_seq, idx: 0, }))
           continue
-        }
-        let mut in_exit = false
-        for k = 0; k < exit_set.length(); k = k + 1 {
-          if spec_accepts(exit_set[k], s) {
-            in_exit = true
-            break
-          }
         }
         if in_exit {
           // 退出：弹出重复帧，继续用剩余栈消费 s
@@ -585,7 +598,29 @@ pub fn Pda::accepted(self : Pda) -> Bool {
           }
           return false
         }
-      FChoice(_) => return false
+      FChoice(cf) => {
+        if cf.decided {
+          let _ = st.pop()
+          continue
+        }
+        // 未决：存在可空选项即可零输入完成
+        let mut any_nullable = false
+        for i = 0; i < cf.options.length(); i = i + 1 {
+          match analyze(cf.options[i], self.rules, 0) {
+            None => ()
+            Some(a) =>
+              if a.nul {
+                any_nullable = true
+                break
+              }
+          }
+        }
+        if any_nullable {
+          let _ = st.pop()
+          continue
+        }
+        return false
+      }
       FRep(f) => {
         let maxed = match f.max_times {
           Some(m) => f.done >= m
@@ -765,6 +800,6 @@ fn copy_frame(f : Frame) -> Frame {
         max_times: x.max_times,
         done: x.done,
       })
-    FChoice(opts) => FChoice(opts)
+    FChoice(x) => FChoice(ChoiceF::{ options: x.options, decided: x.decided, })
   }
 }
