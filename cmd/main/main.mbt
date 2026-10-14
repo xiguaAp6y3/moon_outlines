@@ -3,6 +3,7 @@
 /// 运行：`moon run cmd/main`
 fn main {
   ebnf_demo()
+  json_demo()
   let cases : Array[(String, Array[String])] = []
   // 结构化输出场景的雏形：把"合法输出的形状"写成正则
   cases.push(("true|false", ["true", "false", "True", "tru"]))
@@ -61,5 +62,28 @@ fn ebnf_demo() -> Unit {
       println(@eb.render_grammar(g))
       println("start rule: " + g.start)
     }
+  }
+}
+
+///|
+/// JSON 演示：内置 RFC 8259 文法的下推自动机对样例串做整串判定（M3）。
+fn json_demo() -> Unit {
+  println("")
+  println("== json pda demo ==")
+  let cases : Array[String] = [
+    "{\"k\": [1, 2.5e3, null, true]}", "[1, 2, ]", "{\"a\" 1}", "\"esc \\u0041\"",
+    "tru",
+  ]
+  for i = 0; i < cases.length(); i = i + 1 {
+    let p = match @eb.json_pda() {
+      Err(m) => {
+        println("grammar error: " + m)
+        return
+      }
+      Ok(p) => p
+    }
+    let input = cases[i]
+    let verdict = if p.accept(input) { "accept" } else { "reject" }
+    println("  " + input + " => " + verdict)
   }
 }

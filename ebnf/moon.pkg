@@ -1,2 +1,6 @@
 // ebnf 包：Lark 风格 EBNF 子集解析 + 下推自动机构造。
 // 路线图 M3 的实现载体；当前为占位骨架（类型定义 + 解析器桩）。
+
+import {
+  "moonbitlang/core/json",
+} for "test"
